@@ -26,7 +26,7 @@ class Lidar(Sensor):
     def __init__(self, world_map,num_beams: int = config.LIDAR_BEAMS, 
                  max_range: float = config.LIDAR_RANGE,
                  fov: float = config.LIDAR_FOV,
-                 noise_std: float = config.LIDAR_NOISE_STD,
+                 noise_std: float = config.LIDAR_NOISE_SIGMA,
                  ):
 
         super().__init__(noise_std)
@@ -34,15 +34,18 @@ class Lidar(Sensor):
         self.max_range = max_range
         self.fov = np.radians(fov)
         self.pos:Tuple = (0,0)
-        self.map = map
+        self.map = world_map
     
-    def sense(self, robot, world) -> List[float]:
+    def sense(self) -> List[Tuple]:
         """Get lidar range readings"""
         output = []
         
+        # Get map dimensions
+        map_width = self.map.get_width()
+        map_height = self.map.get_height()
         
         (xi,yi) = self.pos
-        for theta in np.linspace(0,config.LIDAR_FOV,60):
+        for theta in np.linspace(0, config.LIDAR_FOV, 50):
             xj = xi + (config.LIDAR_RANGE * math.cos(theta))
             yj = yi + (config.LIDAR_RANGE * math.sin(theta))
 
@@ -50,6 +53,10 @@ class Lidar(Sensor):
                 u = i/100
                 x = int(lerp(xi,xj,u))
                 y = int(lerp(yi,yj,u))
+
+                # Check bounds
+                if x < 0 or x >= map_width or y < 0 or y >= map_height:
+                    break
 
                 if self.map.get_at((x,y))==(0,0,0):
                     """
@@ -59,11 +66,11 @@ class Lidar(Sensor):
                     the sensor data should have this structure
                     Output: (angle,distance,sensor_position)
                     """ 
-                    distance = distance((x,y),self.pos)
+                    dist = distance((x,y),self.pos)
 
-                    distance,angle = add_gaussian_noise(distance,theta)
+                    dist,angle = add_gaussian_noise(dist,theta)
 
-                    output.append(distance,angle,self.pos)
+                    output.append((dist,angle,self.pos))
                     break
 
         

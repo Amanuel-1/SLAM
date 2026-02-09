@@ -19,10 +19,12 @@ def main():
         # Create world
         print("Creating world...", flush=True)
         world = World(map_path="world/maps/indoor1.png")
-        # print("World created", flush=True)
-        world.sensor_map = world.map.copy()
-
-        scanner = Lidar(world.sensor_map)
+        
+        # store original map for sensor scanning
+        original_map = world.map.copy()
+        scanner = Lidar(original_map)
+        
+        # Fill display with black
         world.map.fill((0,0,0))
 
         
@@ -42,18 +44,20 @@ def main():
                 if event.type == pygame.QUIT:
                     running = False
                 if pygame.mouse.get_focused():
+                    print("SENSOR-ON")
                     sensor_on = True 
                 elif not pygame.mouse.get_focused():
-                  sensor_on = False
+                    print("SENSOR-OFF")
+                    sensor_on = False
 
             if sensor_on:
                 position = pygame.mouse.get_pos()
                 scanner.pos = tuple(position)
-                sensor_output_data =scanner.sense()
-                world.visualize_point_cloud()
-        
-            world.map.blit(world.sensor_map,(0,0))
-
+                sensor_output_data = scanner.sense()
+                print(f"Sensor data points: {len(sensor_output_data)}", flush=True)
+                if sensor_output_data:
+                    world.create_point_cloud(sensor_output_data)
+                    world.visualize_point_cloud()
             
             pygame.display.update()
         

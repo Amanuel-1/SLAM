@@ -53,7 +53,7 @@ def lerp(a,b,t):
 
 def polar2p(distance:float, angle:float,position:Tuple):
     xi,yi = position
-    x = xi + x* math.cos(angle)
-    y = -yi + y* math.sin(angle)
+    x = xi + distance * math.cos(angle)
+    y = yi + distance * math.sin(angle)
 
     return (x,y)

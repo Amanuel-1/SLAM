@@ -57,11 +57,9 @@ class World:
             self.point_cloud.append(data_point)
 
     def visualize_point_cloud(self):
-        self.sensor_map = self.map.copy()
-
         for (x,y) in self.point_cloud:
-            self.sensor_map.set_at(int(x),int(y),(255,0,0))
-            
+            self.map.set_at((int(x), int(y)), (255, 0, 0))
+
 
 
 

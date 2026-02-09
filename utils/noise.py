@@ -1,11 +1,12 @@
 """Noise generation utilities for sensor simulation"""
 import numpy as np
+import numpy.typing as np_type
+import config
 
-
-def add_gaussian_noise(distance: float,angle:float,sigma: float) -> float:
+def add_gaussian_noise(distance: float,angle:float,sigma:np_type.NDArray= config.LIDAR_NOISE_SIGMA) -> float:
     """Add Gaussian noise to a sensor data"""
     mu = np.array([distance,angle])
-    covariance = np.dag(sigma**2)
+    covariance = np.diag(sigma**2)
     
     distance,angle = np.random.multivariate_normal(mean=mu,cov=covariance)
 
