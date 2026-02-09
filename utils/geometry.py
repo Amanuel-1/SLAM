@@ -1,6 +1,7 @@
 """Geometric transformation utilities"""
 import numpy as np
 import math
+import pygame
 from typing import Tuple
 
 
@@ -57,3 +58,12 @@ def polar2p(distance:float, angle:float,position:Tuple):
     y = yi + distance * math.sin(angle)
 
     return (x,y)
+
+
+def draw_line(surface,p1,p2):
+    xi,yi = p1
+    x2,y2 = p2
+
+    pygame.draw.line(surface,(255,0,0),p1,p2)
+
+

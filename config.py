@@ -3,8 +3,8 @@ import numpy as np
 """Configuration constants for SLAM simulation"""
 
 # World settings
-WORLD_WIDTH = 1200
-WORLD_HEIGHT = 700
+WORLD_WIDTH = 2500  # Optimized for 27" 2K display (2560x1440)
+WORLD_HEIGHT = 1380
 MAP_RESOLUTION = 0.05  # meters per pixel
 FPS = 60
 

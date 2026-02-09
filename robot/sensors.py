@@ -3,7 +3,7 @@ from abc import ABC, abstractmethod
 from typing import List, Tuple
 import numpy as np
 from utils.noise import add_gaussian_noise
-from utils.geometry import distance,lerp
+from utils.geometry import distance,lerp,draw_line
 
 import config
 import math
@@ -46,9 +46,11 @@ class Lidar(Sensor):
         
         (xi,yi) = self.pos
         for theta in np.linspace(0, config.LIDAR_FOV, 50):
+           
             xj = xi + (config.LIDAR_RANGE * math.cos(theta))
             yj = yi + (config.LIDAR_RANGE * math.sin(theta))
 
+            # draw_line(self.map,self.pos,(xj,yj))
             for i in range(100):
                 u = i/100
                 x = int(lerp(xi,xj,u))
