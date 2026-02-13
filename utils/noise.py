@@ -35,6 +35,6 @@ def add_gaussian_noise(distance: float, angle: float,
 def add_motion_noise(velocity: float, angular_velocity: float, 
                      trans_std: float, rot_std: float) -> tuple:
     """Add noise to motion commands"""
-    noisy_v = add_gaussian_noise(velocity, trans_std)
-    noisy_omega = add_gaussian_noise(angular_velocity, rot_std)
+    noisy_v = velocity + np.random.normal(0, trans_std)
+    noisy_omega = angular_velocity + np.random.normal(0, rot_std)
     return noisy_v, noisy_omega

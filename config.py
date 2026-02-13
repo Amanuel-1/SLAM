@@ -10,15 +10,15 @@ FPS = 60
 
 
 ROBOT_RADIUS = 0.18  
-MAX_VELOCITY = 0.5 
-MAX_ANGULAR_VELOCITY = 1.5  # rad/s
+MAX_VELOCITY = 400.0
+MAX_ANGULAR_VELOCITY = 2.0*math.pi
 
 # Lidar settings (long-range 2D laser scanner)
 LIDAR_BEAMS = 420  # Increased from 360 for denser point cloud (1 degree resolution)
 LIDAR_RANGE = 200.0 
 LIDAR_FOV = 2 * math.pi 
 # Reduced noise for cleaner point clouds - distance noise in pixels, angle noise in radians
-LIDAR_NOISE_SIGMA = np.array([0.1, 0.001])  # Reduced from [1.0, 0.05] for less scattered points
+LIDAR_NOISE_SIGMA = np.array([0.9, 0.001])  # Reduced from [1.0, 0.05] for less scattered points
 LIDAR_ENABLE_NOISE = True  # Set to False to disable noise completely for testing
 LIDAR_SCAN_RATE = 10 
 
@@ -49,4 +49,10 @@ ROBOT_COLOR = (0, 0, 255)
 ESTIMATED_ROBOT_COLOR = (255, 0, 0)
 LANDMARK_COLOR = (0, 255, 0)
 ESTIMATED_LANDMARK_COLOR = (255, 165, 0)
-LINE_LANDMARK_COLOR = (0, 255, 255)  # Cyan for line segment landmarks
+LINE_LANDMARK_COLOR = (0, 255, 255)
+ROBOT_PATH_COLOR = (255, 0, 255)
+PATH_SAMPLE_DISTANCE = 5.0
+
+# Control sensitivity
+KEYBOARD_VELOCITY_SCALE = 1.0
+KEYBOARD_ANGULAR_SCALE = 1.0  # Cyan for line segment landmarks
