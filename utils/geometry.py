@@ -3,6 +3,7 @@ import numpy as np
 import math
 import pygame
 from typing import Tuple
+from scipy.odr import odr,Model
 
 
 def normalize_angle(angle: float) -> float:
@@ -195,6 +196,50 @@ def project_point_to_line(point, m, b):
 
     return x_projection, y_projection
 
+def line_func(x,slope_params):
+    m,b = slope_params
+    return m*x + b
 
+from scipy.odr import Model, RealData, ODR
+import numpy as np
 
+def odr_fit(self, points):
+    # extract x and y
+    x = np.array([i[0][0] for i in points])
+    y = np.array([i[0][1] for i in points])
+
+    # first define the model
+    linear_model = Model(line_func)
+
+    # need some details on this one 
+    data = RealData(x, y)
+    # Initial guess for parameters [m, b]
+    beta0 = [0., 0.]
+    # Set up our orthogonal distance regression 
+    odr = ODR(data, linear_model, beta0=beta0)
+
+    
+    fitted_line = odr.run()
+
+    # Extract slope and intercept
+    m, b = output.beta
+
+    return m, b
+def get_predicted_point(line_params,sensed_point,position):
+    """
+    this function returns a predicted point by intersecting the fitted line and the
+    line from the robots position to the point sensed (the laser beam to the point sensed)
+    here the line_params is a line in general form so we need to 
+    """
+    
+    x,y = sensed_point
+    x0,y0 = position
+    #get the line for the laser beam
+    m2,b2 = points_to_line((x0,y0),(x,y))
+    laser_line_params = slope_intersept_to_general(m2,b2)
+
+    #now we need to get the intersectoin between the two lines
+    intersection = intersection_point_general(line_params, laser_line_params)
+    #intersection returns an x,y tuple
+    return intersection
 
