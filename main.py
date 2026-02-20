@@ -130,43 +130,51 @@ def main():
                         points, pred_points, (i, j) = seed_data
                         seed_segments.append(seed_data)
                         
-                        # Algorithm 2: Region growing
-                        grown_segment = line_extractor.seed_segment_growing((i, j), break_point)
+                        grown_segment = line_extractor.seed_segment_growing((i, j), break_point, position=position)
                         
                         if grown_segment is not None:
                             final_segments.append(line_extractor.line_segments[-1])
-                            # Update break point to end of grown segment
+                            # uppdate break point to end of grown segment
                             break_point = grown_segment[3] + 1
                         else:
-                            # If growth failed, move past this seed
+                            #  move past this seed if growth fails
                             break_point = j + 1
                     
-                    # Algorithm 3: Process overlap regions
                     if len(final_segments) > 1:
                         final_segments = line_extractor.process_overlap_regions()
                     
-                    # Data association: Associate observed segments with existing landmarks
+                    validated_segments = []
+                    for seg in final_segments:
+                        if line_extractor.validate_segment_continuity(seg, sensor_position=position):
+                            validated_segments.append(seg)
+                        else:
+                            print(f"  Rejected segment spanning gap: length={seg.get('length', 0):.1f}, "
+                                  f"points={seg.get('point_count', 0)}", flush=True)
+                    
+                    final_segments = validated_segments
+                    
+                    #  qssociate our observed segments with existing landmarks
                     associations = landmark_manager.associate_observations(final_segments, current_frame=frame_count)
                     
-                    # Remove old landmarks that haven't been seen recently
+                    # remove old landmarks that haven't been seen recently : 
                     landmark_manager.remove_old_landmarks(max_age=10, current_frame=frame_count)
                     
-                    # Get strong landmarks (features observed multiple times)
+                    #  strong landmarks(features observed multiple timess)
                     strong_landmarks = landmark_manager.get_strong_landmarks()
-                    
+                    print("strong langmarks:",strong_landmarks)
                     # Visualize seed segments (for debugging)
                     if viz_mode in ['seeds', 'all']:
                         world.visualize_seed_segments(seed_segments, color=(255, 255, 0), thickness=1)
                     
-                    # Visualize final line segments (current observations)
+                    #draw the final line segments (current observations)
                     if viz_mode in ['lines', 'all']:
                         world.visualize_line_segments(final_segments, color=(255, 0, 0), thickness=2)
                     
-                    # Visualize strong landmarks (cyan color)
+                    
                     if strong_landmarks:
                         world.visualize_landmarks(strong_landmarks, color=(0, 255, 255), thickness=3)
                     
-                    # Print statistics
+                    
                     print(f"Frame {frame_count}: {len(seed_segments)} seeds, {len(final_segments)} segments, "
                           f"{len(associations)} associations, {len(strong_landmarks)} strong landmarks", flush=True)
                     

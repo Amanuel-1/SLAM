@@ -112,6 +112,44 @@ class SplitMergeExtraction(LineExtraction):
             if j > self.NP:
                 continue
             
+            has_gap = False
+            for k in range(i, min(j - 1, len(self.laser_points) - 1)):
+                point_k, angle_k = self.laser_points[k]
+                point_k1, angle_k1 = self.laser_points[k + 1]
+                
+                if abs(angle_k1 - angle_k) > self.ANGLE_GAP_MAX:
+                    has_gap = True
+                    break
+                
+                dx = point_k1[0] - point_k[0]
+                dy = point_k1[1] - point_k[1]
+                spatial_gap_sq = dx * dx + dy * dy
+                if spatial_gap_sq > self.GMAX * self.GMAX:
+                    has_gap = True
+                    break
+                
+                dx_k = point_k[0] - position[0]
+                dy_k = point_k[1] - position[1]
+                range_sq_k = dx_k * dx_k + dy_k * dy_k
+                
+                dx_k1 = point_k1[0] - position[0]
+                dy_k1 = point_k1[1] - position[1]
+                range_sq_k1 = dx_k1 * dx_k1 + dy_k1 * dy_k1
+                
+                if range_sq_k > 0 and range_sq_k1 > 0:
+                    ratio_threshold_sq = self.DISTANCE_JUMP_RATIO * self.DISTANCE_JUMP_RATIO
+                    if range_sq_k > range_sq_k1:
+                        if range_sq_k > ratio_threshold_sq * range_sq_k1:
+                            has_gap = True
+                            break
+                    else:
+                        if range_sq_k1 > ratio_threshold_sq * range_sq_k:
+                            has_gap = True
+                            break
+            
+            if has_gap:
+                continue
+            
             # Fit line to seed segment points
             # Paper: fit Seed(i, j)
             m, b = odr_fit(self.laser_points[i:j])
@@ -160,7 +198,7 @@ class SplitMergeExtraction(LineExtraction):
         
         return None
     
-    def seed_segment_growing(self, indices: Tuple[int, int], break_point: int) -> Optional[List]:
+    def seed_segment_growing(self, indices: Tuple[int, int], break_point: int, position: Tuple[float, float] = (0, 0)) -> Optional[List]:
         """
         Algorithm 2: Region growing
         
@@ -190,64 +228,52 @@ class SplitMergeExtraction(LineExtraction):
         pb = i - 1
         
         # Forward growth
-        # Paper: while (distance from point at P_f to Line(P_b, P_f) < ε) do
-        # Initialize tracking variables for gap detection
-        last_included_point = self.laser_points[j] if j < len(self.laser_points) else None  # Start from seed end
-        last_included_dist = None
-        if last_included_point is not None:
-            from utils.geometry import distance
-            try:
-                last_included_dist = distance(last_included_point[0], (0, 0))
-            except:
-                pass
+        last_included_point = self.laser_points[j - 1] if j > 0 and j - 1 < len(self.laser_points) else None
+        
+        sensor_x, sensor_y = position if position else (0, 0)
+        gmax_sq = self.GMAX * self.GMAX
+        ratio_threshold_sq = self.DISTANCE_JUMP_RATIO * self.DISTANCE_JUMP_RATIO
         
         while pf < self.NP:
-            # Ensure pf is within valid bounds
             if pf >= len(self.laser_points):
                 break
             
             point, angle = self.laser_points[pf]
             
-            # FIRST: Check gap constraints BEFORE checking line fit
-            # This prevents bridging across windows/doors
             if last_included_point is not None:
                 prev_point, prev_angle = last_included_point
                 
-                # Check spatial gap
-                spatial_gap = point_point_distance(prev_point, point)
-                if spatial_gap > self.GMAX:
-                    break  # Gap too large, stop growing
+                if abs(angle - prev_angle) > self.ANGLE_GAP_MAX:
+                    break
                 
-                # Check angular gap (large jumps indicate windows/doors)
-                angular_gap = abs(angle - prev_angle)
-                if angular_gap > self.ANGLE_GAP_MAX:
-                    break  # Angular gap too large, likely a window/door
+                dx = point[0] - prev_point[0]
+                dy = point[1] - prev_point[1]
+                if dx * dx + dy * dy > gmax_sq:
+                    break
                 
-                # Check distance jump (sudden changes in range indicate gaps)
-                # Use distance from origin as proxy for range measurement
-                from utils.geometry import distance
-                try:
-                    curr_dist = distance(point, (0, 0))
-                    if last_included_dist is not None and last_included_dist > 0:
-                        dist_ratio = max(curr_dist, last_included_dist) / min(curr_dist, last_included_dist)
-                        if dist_ratio > self.DISTANCE_JUMP_RATIO:
-                            break  # Large distance jump, likely a gap (window/door)
-                    last_included_dist = curr_dist
-                except:
-                    pass  # If distance calculation fails, continue
+                dx_prev = prev_point[0] - sensor_x
+                dy_prev = prev_point[1] - sensor_y
+                range_sq_prev = dx_prev * dx_prev + dy_prev * dy_prev
+                
+                dx_curr = point[0] - sensor_x
+                dy_curr = point[1] - sensor_y
+                range_sq_curr = dx_curr * dx_curr + dy_curr * dy_curr
+                
+                if range_sq_prev > 0 and range_sq_curr > 0:
+                    if range_sq_prev > range_sq_curr:
+                        if range_sq_prev > ratio_threshold_sq * range_sq_curr:
+                            break
+                    else:
+                        if range_sq_curr > ratio_threshold_sq * range_sq_prev:
+                            break
             
-            # SECOND: Check if point is within epsilon distance of current line
             d = point_line_distance(point, line)
             if d > self.EPSILON:
                 break
             
-            # Point passed all checks, include it
             last_included_point = self.laser_points[pf]
-            
-            # Refit line with expanded segment
-            # Paper: refit Line(P_b, P_f)
             pf += 1
-            # Check bounds: pf should be <= len (exclusive end for slicing)
+            
             if pf <= len(self.laser_points):
                 try:
                     m, b = odr_fit(self.laser_points[pb + 1:pf])
@@ -265,61 +291,48 @@ class SplitMergeExtraction(LineExtraction):
             pf = len(self.laser_points) - 1
         
         # Backward growth
-        # Paper: while (distance from point at P_b to Line(P_b, P_f) < ε) do
-        # Initialize tracking variables for gap detection
-        last_included_point_backward = self.laser_points[i] if i < len(self.laser_points) else None  # Start from seed start
-        last_included_dist_backward = None
-        if last_included_point_backward is not None:
-            from utils.geometry import distance
-            try:
-                last_included_dist_backward = distance(last_included_point_backward[0], (0, 0))
-            except:
-                pass
+        last_included_point_backward = self.laser_points[i] if i < len(self.laser_points) else None
         
         while pb >= break_point and pb >= 0:
-            # Ensure pb is within valid bounds
             if pb >= len(self.laser_points):
                 break
             
             point, angle = self.laser_points[pb]
             
-            # FIRST: Check gap constraints BEFORE checking line fit
             if last_included_point_backward is not None:
                 next_point, next_angle = last_included_point_backward
                 
-                # Check spatial gap
-                spatial_gap = point_point_distance(point, next_point)
-                if spatial_gap > self.GMAX:
-                    break  # Gap too large, stop growing
+                if abs(angle - next_angle) > self.ANGLE_GAP_MAX:
+                    break
                 
-                # Check angular gap
-                angular_gap = abs(angle - next_angle)
-                if angular_gap > self.ANGLE_GAP_MAX:
-                    break  # Angular gap too large
+                dx = point[0] - next_point[0]
+                dy = point[1] - next_point[1]
+                if dx * dx + dy * dy > gmax_sq:
+                    break
                 
-                # Check distance jump
-                try:
-                    from utils.geometry import distance
-                    curr_dist = distance(point, (0, 0))
-                    if last_included_dist_backward is not None and last_included_dist_backward > 0:
-                        dist_ratio = max(curr_dist, last_included_dist_backward) / min(curr_dist, last_included_dist_backward)
-                        if dist_ratio > self.DISTANCE_JUMP_RATIO:
-                            break  # Large distance jump, likely a gap
-                    last_included_dist_backward = curr_dist
-                except:
-                    pass
+                dx_point = point[0] - sensor_x
+                dy_point = point[1] - sensor_y
+                range_sq_point = dx_point * dx_point + dy_point * dy_point
+                
+                dx_next = next_point[0] - sensor_x
+                dy_next = next_point[1] - sensor_y
+                range_sq_next = dx_next * dx_next + dy_next * dy_next
+                
+                if range_sq_point > 0 and range_sq_next > 0:
+                    if range_sq_point > range_sq_next:
+                        if range_sq_point > ratio_threshold_sq * range_sq_next:
+                            break
+                    else:
+                        if range_sq_next > ratio_threshold_sq * range_sq_point:
+                            break
             
-            # SECOND: Check if point is within epsilon distance of current line
             d = point_line_distance(point, line)
             if d > self.EPSILON:
                 break
             
-            # Point passed all checks, include it
             last_included_point_backward = self.laser_points[pb]
-            
-            # Refit line with expanded segment
-            # Paper: refit Line(P_b, P_f)
             pb -= 1
+            
             if pb >= break_point and pb >= 0 and pf + 1 <= len(self.laser_points):
                 try:
                     m, b = odr_fit(self.laser_points[pb + 1:pf + 1])
@@ -481,6 +494,34 @@ class SplitMergeExtraction(LineExtraction):
             i += 1
         
         return sorted_segments
+    
+    def validate_segment_continuity(self, segment: dict, sensor_position: Tuple[float, float] = None) -> bool:
+        """
+        Lightweight validation that a line segment represents a continuous surface.
+        Samples key points to check for outliers that indicate bridging across gaps.
+        """
+        line_params = segment.get('line_params')
+        points = segment.get('points', [])
+        
+        if line_params is None or len(points) < 3:
+            return True
+        
+        sample_indices = [0, len(points) // 2, len(points) - 1]
+        if len(points) > 10:
+            sample_indices.extend([len(points) // 4, 3 * len(points) // 4])
+        
+        max_dist = 0.0
+        for idx in sample_indices:
+            if idx < len(points):
+                point = points[idx][0]
+                dist = point_line_distance(point, line_params)
+                if dist > max_dist:
+                    max_dist = dist
+        
+        if max_dist > 2.0 * self.EPSILON:
+            return False
+        
+        return True
 
 
 class IncrementalExtraction(LineExtraction):

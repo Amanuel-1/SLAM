@@ -33,24 +33,14 @@ DATA_ASSOCIATION_THRESHOLD = 20.0  # Similarity score threshold for line segment
 MAX_LANDMARK_DISTANCE = 150.0
 
 # Line extraction parameters (seeded region growing algorithm)
-# Based on: "A line segment extraction algorithm using laser data based on seeded region growing"
-# Adjusted for wall detection: tighter thresholds to fit along walls, not across thickness
-LINE_EXTRACTION_EPSILON = 2.0    # ε: Perpendicular distance threshold (d2) - pixels
-                                  # Increased to allow fitting along longer walls
-LINE_EXTRACTION_DELTA = 2.0      # δ: Point-to-predicted-point distance threshold (d1) - pixels
-                                  # Increased to allow fitting along longer walls
-LINE_EXTRACTION_S_NUM = 5        # S_num: Number of points to fit seed segment
-                                  # Increased for more robust seed detection
-LINE_EXTRACTION_P_MIN = 5        # P_min: Minimum number of points for valid segment
-                                  # Increased to filter out short spurious segments
-LINE_EXTRACTION_L_MIN = 30.0     # L_min: Minimum segment length (pixels)
-                                  # Increased to prefer longer wall segments
-LINE_EXTRACTION_G_MAX = 5.0      # G_max: Maximum gap between consecutive points (pixels)
-                                  # Reduced to prevent bridging windows/doors
-LINE_EXTRACTION_ANGLE_GAP_MAX = 0.1  # Maximum angular gap (radians) ~5.7 degrees
-                                      # Prevents connecting across windows/doors
-LINE_EXTRACTION_DISTANCE_JUMP_RATIO = 1.5  # Max ratio of distance change between consecutive points
-                                            # Prevents connecting across gaps
+LINE_EXTRACTION_EPSILON = 2.0
+LINE_EXTRACTION_DELTA = 2.0
+LINE_EXTRACTION_S_NUM = 5
+LINE_EXTRACTION_P_MIN = 6
+LINE_EXTRACTION_L_MIN = 40.0
+LINE_EXTRACTION_G_MAX = 8.0
+LINE_EXTRACTION_ANGLE_GAP_MAX = 0.08
+LINE_EXTRACTION_DISTANCE_JUMP_RATIO = 1.3
 
 # Visualization
 BACKGROUND_COLOR = (255, 255, 255)
