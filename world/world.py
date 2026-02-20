@@ -138,7 +138,6 @@ class World:
             if seed and len(seed) >= 3:
                 points, pred_points, (i, j) = seed
                 if points and len(points) >= 2:
-                    # Draw line connecting seed points
                     for idx in range(len(points) - 1):
                         if idx < len(points) and idx + 1 < len(points):
                             p1 = points[idx][0]
@@ -150,7 +149,35 @@ class World:
                                                    (int(p2[0]), int(p2[1])),
                                                    thickness)
                                 except (ValueError, TypeError):
-                                    pass  # Skip invalid coordinates
+                                    pass
+    
+    def visualize_robot(self, robot, color=(0, 0, 255)):
+        """Draw robot as circle with heading indicator"""
+        import math
+        x, y = int(robot.pose.x), int(robot.pose.y)
+        radius = 15
+        
+        pygame.draw.circle(self.map, color, (x, y), radius, 0)
+        
+        pygame.draw.circle(self.map, (255, 255, 255), (x, y), radius, 2)
+        
+        end_x = x + radius * 2 * math.cos(robot.pose.theta)
+        end_y = y + radius * 2 * math.sin(robot.pose.theta)
+        pygame.draw.line(self.map, (255, 255, 0), (x, y), 
+                        (int(end_x), int(end_y)), 3)
+    
+    def visualize_robot_path(self, path, color=(255, 0, 255)):
+        """Draw robot's traveled path"""
+        if len(path) < 2:
+            return
+        
+        for i in range(len(path) - 1):
+            p1 = (int(path[i][0]), int(path[i][1]))
+            p2 = (int(path[i+1][0]), int(path[i+1][1]))
+            pygame.draw.line(self.map, color, p1, p2, 2)
+        
+        # for (x, y, _) in path:
+        #     pygame.draw.circle(self.map, color, (int(x), int(y)), 2)
 
 
 

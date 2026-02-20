@@ -1,2 +1,24 @@
-- implement a robot that embodies the sensor
-- implement robot movenemt controls , and visualise the path of the robot 
+✓ implement a robot that embodies the sensor
+✓ implement robot movement controls, and visualise the path of the robot
+
+COMPLETED FEATURES:
+- Robot class with differential drive motion model
+- Collision detection with obstacles
+- Keyboard controls (WASD/Arrow keys, Q/E for combined movement)
+- Lidar sensor embodied in robot (follows robot pose)
+- Robot visualization (circle with heading indicator and sensor range)
+- Path recording and visualization
+- Path reset functionality (R key)
+- Toggle path visibility (5 key)
+- Visualization modes (1-4 keys)
+
+CONTROLS:
+- W/↑: Move forward
+- S/↓: Move backward
+- A/←: Rotate left
+- D/→: Rotate right
+- Q: Forward + rotate left
+- E: Forward + rotate right
+- 1-4: Change visualization mode
+- 5: Toggle path visibility
+- R: Reset path 
