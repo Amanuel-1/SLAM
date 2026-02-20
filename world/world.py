@@ -56,15 +56,101 @@ class World:
 
 
     def create_point_cloud(self, data):
-
-        for (distance,angle,sensor_position) in data:
-            data_point = polar2p(distance,angle,sensor_position)
-
+        """Create point cloud from sensor data (deprecated - use transform_polar_point_set instead)"""
+        for (distance, angle, sensor_position) in data:
+            data_point = polar2p(distance, angle, sensor_position)
             self.point_cloud.append(data_point)
+    
+    def clear_point_cloud(self):
+        """Clear the point cloud"""
+        self.point_cloud = []
 
     def visualize_point_cloud(self):
-        for (x,y) in self.point_cloud:
+        for (x, y) in self.point_cloud:
             self.map.set_at((int(x), int(y)), (50, 200, 50))
+    
+    def visualize_line_segments(self, line_segments, color=(255, 0, 0), thickness=2):
+        """
+        Visualize extracted line segments on the map.
+        
+        Args:
+            line_segments: List of segment dictionaries with 'endpoints' key
+            color: RGB color tuple for line segments
+            thickness: Line thickness in pixels
+        """
+        if not line_segments:
+            return
+        
+        for segment in line_segments:
+            if segment and 'endpoints' in segment:
+                p1, p2 = segment['endpoints']
+                if p1 and p2:
+                    try:
+                        pygame.draw.line(self.map, color, 
+                                       (int(p1[0]), int(p1[1])), 
+                                       (int(p2[0]), int(p2[1])), 
+                                       thickness)
+                    except (ValueError, TypeError):
+                        pass  # Skip invalid coordinates
+    
+    def visualize_landmarks(self, landmarks, color=(0, 255, 255), thickness=3):
+        """
+        Visualize line segment landmarks on the map.
+        
+        Args:
+            landmarks: List of LineLandmark objects
+            color: RGB color tuple for landmarks
+            thickness: Line thickness in pixels
+        """
+        if not landmarks:
+            return
+        
+        for landmark in landmarks:
+            if landmark and landmark.endpoints:
+                p1, p2 = landmark.endpoints
+                if p1 and p2:
+                    try:
+                        # Draw landmark line
+                        pygame.draw.line(self.map, color,
+                                       (int(p1[0]), int(p1[1])),
+                                       (int(p2[0]), int(p2[1])),
+                                       thickness)
+                        
+                        # Draw midpoint marker
+                        mid_x, mid_y = int(landmark.midpoint[0]), int(landmark.midpoint[1])
+                        pygame.draw.circle(self.map, color, (mid_x, mid_y), 5)
+                    except (ValueError, TypeError):
+                        pass  # Skip invalid coordinates
+    
+    def visualize_seed_segments(self, seed_data, color=(255, 255, 0), thickness=1):
+        """
+        Visualize seed segments for debugging.
+        
+        Args:
+            seed_data: List of seed segment data [points, predicted_points, (i, j)]
+            color: RGB color tuple for seed segments
+            thickness: Line thickness in pixels
+        """
+        if not seed_data:
+            return
+        
+        for seed in seed_data:
+            if seed and len(seed) >= 3:
+                points, pred_points, (i, j) = seed
+                if points and len(points) >= 2:
+                    # Draw line connecting seed points
+                    for idx in range(len(points) - 1):
+                        if idx < len(points) and idx + 1 < len(points):
+                            p1 = points[idx][0]
+                            p2 = points[idx + 1][0]
+                            if p1 and p2:
+                                try:
+                                    pygame.draw.line(self.map, color,
+                                                   (int(p1[0]), int(p1[1])),
+                                                   (int(p2[0]), int(p2[1])),
+                                                   thickness)
+                                except (ValueError, TypeError):
+                                    pass  # Skip invalid coordinates
 
 
 

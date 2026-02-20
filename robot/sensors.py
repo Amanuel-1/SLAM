@@ -44,17 +44,19 @@ class Lidar(Sensor):
         map_width = self.map.get_width()
         map_height = self.map.get_height()
         
-        (xi,yi) = self.pos
-        for theta in np.linspace(0, config.LIDAR_FOV, 50):
+        (xi, yi) = self.pos
+        # Use the configured number of beams instead of hardcoded 50
+        for theta in np.linspace(0, config.LIDAR_FOV, self.num_beams):
            
-            xj = xi + (config.LIDAR_RANGE * math.cos(theta))
-            yj = yi + (config.LIDAR_RANGE * math.sin(theta))
+            xj = xi + (self.max_range * math.cos(theta))
+            yj = yi + (self.max_range * math.sin(theta))
 
             # draw_line(self.map,self.pos,(xj,yj))
-            for i in range(100):
-                u = i/100
-                x = int(lerp(xi,xj,u))
-                y = int(lerp(yi,yj,u))
+            # Increase ray resolution for better accuracy (200 steps instead of 100)
+            for i in range(200):
+                u = i / 200
+                x = int(lerp(xi, xj, u))
+                y = int(lerp(yi, yj, u))
 
                 # Check bounds
                 if x < 0 or x >= map_width or y < 0 or y >= map_height:
@@ -70,9 +72,15 @@ class Lidar(Sensor):
                     """ 
                     dist = distance((x,y),self.pos)
 
-                    dist,angle = add_gaussian_noise(dist,theta)
+                    # Apply noise if enabled
+                    if config.LIDAR_ENABLE_NOISE:
+                        dist, angle = add_gaussian_noise(dist, theta, 
+                                                         config.LIDAR_NOISE_SIGMA, 
+                                                         enable_noise=True)
+                    else:
+                        angle = theta
 
-                    output.append((dist,angle,self.pos))
+                    output.append((dist, angle, self.pos))
                     break
 
         

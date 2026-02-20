@@ -3,7 +3,8 @@ import numpy as np
 import math
 import pygame
 from typing import Tuple
-from scipy.odr import odr,Model
+from scipy.odr import odr, Model
+from fractions import Fraction
 
 
 def normalize_angle(angle: float) -> float:
@@ -60,15 +61,50 @@ def polar2p(distance:float, angle:float,position:Tuple):
 
     return (int(x),int(y))
 
-def transform_polar_point_set(data):
-    point_coordinates =[]
+def transform_polar_point_set(data, min_distance=1.0):
+    """
+    Transform polar lidar data to Cartesian coordinates, filter duplicates, and sort by angle.
+    
+    The seeded region growing algorithm requires points to be ordered by scan angle
+    so that consecutive points in the array correspond to consecutive scan angles.
+    
+    Args:
+        data: List of tuples (distance, angle, position)
+        min_distance: Minimum distance between consecutive points to avoid duplicates (pixels)
+    
+    Returns:
+        List of tuples ((x, y), angle) sorted by angle, with duplicates filtered
+    """
+    point_coordinates = []
     if data:
-        for (distance, angle,position) in data:
-            coordinate = polar2p(distance, angle, positon)
-            point_coordinates.append((coordinate,angle))
-
-        #TODO: set the NP variable to len(point_coordinates)-1 
-        # NP is the number of points (used in the three sections of the split and merge algorithm)
+        for (distance, angle, position) in data:
+            coordinate = polar2p(distance, angle, position)
+            point_coordinates.append((coordinate, angle))
+        
+        # Sort by angle to ensure proper ordering for line extraction
+        # This is critical for the seeded region growing algorithm
+        point_coordinates.sort(key=lambda p: p[1])  # Sort by angle (second element)
+        
+        # Filter out points that are too close together (duplicates or near-duplicates)
+        # Also filter based on angular separation to reduce noise effects
+        if len(point_coordinates) > 1:
+            filtered_points = [point_coordinates[0]]  # Always keep first point
+            min_angular_separation = 0.001  # Minimum angular separation in radians (~0.06 degrees)
+            
+            for i in range(1, len(point_coordinates)):
+                prev_point, prev_angle = filtered_points[-1]
+                curr_point, curr_angle = point_coordinates[i]
+                
+                # Calculate spatial and angular separation
+                spatial_dist = point_point_distance(prev_point, curr_point)
+                angular_sep = abs(curr_angle - prev_angle)
+                
+                # Keep point if it's far enough spatially AND angularly
+                # This helps filter out noise-induced duplicates
+                if spatial_dist >= min_distance or angular_sep >= min_angular_separation:
+                    filtered_points.append(point_coordinates[i])
+            
+            point_coordinates = filtered_points
     
     return point_coordinates
 
@@ -79,13 +115,15 @@ def draw_line(surface,p1,p2):
     pygame.draw.line(surface,(255,0,0),p1,p2)
 
 
-def point_line_distance(point,line_params):
+def point_line_distance(point, line_params):
     """
         - this function returns a distance between a point and a line given in general form
+        - Line equation: Ax + By + C = 0
+        - Distance formula: |Ax + By + C| / sqrt(A^2 + B^2)
     """
-    A,B,C = line_params
-    x,y = point
-    distance = abs(A*x + C*y +C)/math.sqrt(A**2 + B**2)
+    A, B, C = line_params
+    x, y = point
+    distance = abs(A*x + B*y + C) / math.sqrt(A**2 + B**2)
     
     return distance
 def point_point_distance(point1,point2):
@@ -176,15 +214,28 @@ def intersection_point_general(params1,params2):
 
     return x,y
 
-def points_to_line(point1,point2):
-    x1,y1 = point1
-    x2,y2 = point2 
-    if x1 == x2:
-        #the line is vertival and the slope is infinite
+def points_to_line(point1, point2):
+    """
+    Compute slope and y-intercept of line through two points.
+    
+    Args:
+        point1: First point (x1, y1)
+        point2: Second point (x2, y2)
+    
+    Returns:
+        (m, b) where y = m*x + b, or None if line is vertical
+    """
+    x1, y1 = point1
+    x2, y2 = point2
+    
+    # Check if line is vertical (use tolerance for floating point comparison)
+    if abs(x1 - x2) < 1e-10:
+        # The line is vertical and the slope is infinite
         return None
-    m = (y2-y1)/(x2-x1)
-    b = y1-(m*x1)
-    return m,b
+    
+    m = (y2 - y1) / (x2 - x1)
+    b = y1 - (m * x1)
+    return m, b
 def project_point_to_line(point, m, b):
     x, y = point
 
@@ -196,50 +247,105 @@ def project_point_to_line(point, m, b):
 
     return x_projection, y_projection
 
-def line_func(x,slope_params):
-    m,b = slope_params
+def line_func(B, x):
+    """
+    Linear model function for scipy.odr.
+    
+    Args:
+        B: Parameter vector [m, b] where m is slope and b is y-intercept
+        x: Independent variable (x-coordinate)
+    
+    Returns:
+        y = m*x + b
+    """
+    m, b = B
     return m*x + b
 
 from scipy.odr import Model, RealData, ODR
 import numpy as np
+from fractions import Fraction
 
-def odr_fit(self, points):
-    # extract x and y
-    x = np.array([i[0][0] for i in points])
-    y = np.array([i[0][1] for i in points])
+def odr_fit(points):
+    """
+    Orthogonal Distance Regression (ODR) for fitting a line to points.
+    Returns slope (m) and y-intercept (b) of the fitted line.
+    
+    Args:
+        points: List of tuples, where each tuple is ((x, y), angle) or (x, y)
+    
+    Returns:
+        (m, b): slope and y-intercept of the fitted line
+    """
+    # Extract x and y coordinates
+    # Handle both formats: ((x, y), angle) or (x, y)
+    if isinstance(points[0], tuple) and len(points[0]) == 2:
+        if isinstance(points[0][0], tuple):
+            # Format: ((x, y), angle)
+            x = np.array([p[0][0] for p in points])
+            y = np.array([p[0][1] for p in points])
+        else:
+            # Format: (x, y)
+            x = np.array([p[0] for p in points])
+            y = np.array([p[1] for p in points])
+    else:
+        raise ValueError("Invalid point format")
 
-    # first define the model
+    # Define the linear model
     linear_model = Model(line_func)
 
-    # need some details on this one 
+    # Create RealData object
     data = RealData(x, y)
+    
     # Initial guess for parameters [m, b]
     beta0 = [0., 0.]
-    # Set up our orthogonal distance regression 
-    odr = ODR(data, linear_model, beta0=beta0)
-
     
-    fitted_line = odr.run()
+    # Set up orthogonal distance regression 
+    odr_instance = ODR(data, linear_model, beta0=beta0)
+    
+    # Run the regression
+    fitted_line = odr_instance.run()
 
     # Extract slope and intercept
-    m, b = output.beta
+    m, b = fitted_line.beta
 
     return m, b
-def get_predicted_point(line_params,sensed_point,position):
+def get_predicted_point(line_params, sensed_point, position):
     """
-    this function returns a predicted point by intersecting the fitted line and the
-    line from the robots position to the point sensed (the laser beam to the point sensed)
-    here the line_params is a line in general form so we need to 
-    """
+    Returns a predicted point by intersecting the fitted line and the
+    line from the robot's position to the sensed point (the laser beam).
     
-    x,y = sensed_point
-    x0,y0 = position
-    #get the line for the laser beam
-    m2,b2 = points_to_line((x0,y0),(x,y))
-    laser_line_params = slope_intersept_to_general(m2,b2)
-
-    #now we need to get the intersectoin between the two lines
+    Args:
+        line_params: Line parameters in general form (A, B, C) where Ax + By + C = 0
+        sensed_point: The sensed point (x, y)
+        position: Sensor position (x0, y0)
+    
+    Returns:
+        (x, y) intersection point, or None if lines are parallel
+    """
+    x, y = sensed_point
+    x0, y0 = position
+    
+    # Handle vertical laser beam case (x0 == x)
+    if abs(x0 - x) < 1e-10:
+        # Vertical line: x = x0
+        # Find intersection with fitted line: Ax + By + C = 0
+        A, B, C = line_params
+        if abs(B) < 1e-10:
+            # Fitted line is also vertical, no intersection
+            return None
+        # Substitute x = x0 into fitted line equation
+        y_intersect = -(A * x0 + C) / B
+        return (x0, y_intersect)
+    
+    # Get the line for the laser beam
+    line_result = points_to_line((x0, y0), (x, y))
+    if line_result is None:
+        return None
+    
+    m2, b2 = line_result
+    laser_line_params = slope_intersept_to_general(m2, b2)
+    
+    # Get the intersection between the two lines
     intersection = intersection_point_general(line_params, laser_line_params)
-    #intersection returns an x,y tuple
     return intersection
 
