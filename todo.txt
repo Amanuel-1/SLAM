@@ -1,0 +1,2 @@
+- implement a robot that embodies the sensor
+- implement robot movenemt controls , and visualise the path of the robot 

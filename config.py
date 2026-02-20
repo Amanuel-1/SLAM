@@ -23,11 +23,11 @@ LIDAR_ENABLE_NOISE = True  # Set to False to disable noise completely for testin
 LIDAR_SCAN_RATE = 10 
 
 # Odometry noise (realistic wheel encoder noise)
-ODOM_NOISE_TRANSLATION = 0.05 
-ODOM_NOISE_ROTATION = 0.03 
+ODOM_NOISE_TRANSLATION = 0.05
+ODOM_NOISE_ROTATION = 0.03
 
 # SLAM settings (EKF-SLAM parameters)
-LANDMARK_DETECTION_THRESHOLD = 2.0 
+LANDMARK_DETECTION_THRESHOLD = 1.0 
 DATA_ASSOCIATION_THRESHOLD = 20.0  # Similarity score threshold for line segment matching (lower = stricter)
                                     # Based on weighted combination of midpoint distance, line distance, and length
 MAX_LANDMARK_DISTANCE = 150.0
