@@ -3,7 +3,6 @@
 a real-time slam implementation using line segment extraction from lidar data. I extract line features from 2d laser scans, track them as landmarks, and visualize everything as the robot moves around.
 
 <img width="2499" height="1377" alt="image" src="https://github.com/user-attachments/assets/ce35f9e2-e287-453e-a099-888e6ceb4ac4" />
-<img width="2499" height="1377" alt="image" src="https://github.com/user-attachments/assets/ce35f9e2-e287-453e-a099-888e6ceb4ac4" />
 
 *robot exploring the environment with line features being extracted in real-time*
 
@@ -17,9 +16,7 @@ a real-time slam implementation using line segment extraction from lidar data. I
 
 The current implememntation uses a topdown cros0section of an indoor environment shown below.
 <img width="1536" height="1024" alt="image" src="https://github.com/user-attachments/assets/10caf801-ae4d-46b5-8b96-510a7579c055" />
-<img width="1536" height="1024" alt="image" src="https://github.com/user-attachments/assets/10caf801-ae4d-46b5-8b96-510a7579c055" />
-![Uploading image.png…]()
-![Uploading image.png…]()
+
 
 
 ## quick start
