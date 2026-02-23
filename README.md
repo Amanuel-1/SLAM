@@ -93,8 +93,11 @@ landmarks that persist across multiple frames are shown in cyan.
 - magenta - robot's path
 - blue circle - robot (yellow line shows heading)
 
-![Full Visualization](screenshots/full_viz.png)
-*all visualization layers enabled*
+  <img width="1738" height="572" alt="image" src="https://github.com/user-attachments/assets/dda69973-a678-4058-a9fe-8ad2d80bdf45" />
+
+
+
+
 
 ## configuration
 
