@@ -2,7 +2,9 @@
 
 a real-time slam implementation using line segment extraction from lidar data. I extract line features from 2d laser scans, track them as landmarks, and visualize everything as the robot moves around.
 
-![Main View](screenshots/main_view.png)
+<img width="2499" height="1377" alt="image" src="https://github.com/user-attachments/assets/ce35f9e2-e287-453e-a099-888e6ceb4ac4" />
+<img width="2499" height="1377" alt="image" src="https://github.com/user-attachments/assets/ce35f9e2-e287-453e-a099-888e6ceb4ac4" />
+
 *robot exploring the environment with line features being extracted in real-time*
 
 ## what it does
@@ -12,6 +14,13 @@ a real-time slam implementation using line segment extraction from lidar data. I
 - tracks landmarks over time with data association
 - lets you drive a robot around with keyboard controls
 - visualizes everything: point cloud, line segments, landmarks, robot path
+
+The current implememntation uses a topdown cros0section of an indoor environment shown below.
+<img width="1536" height="1024" alt="image" src="https://github.com/user-attachments/assets/10caf801-ae4d-46b5-8b96-510a7579c055" />
+<img width="1536" height="1024" alt="image" src="https://github.com/user-attachments/assets/10caf801-ae4d-46b5-8b96-510a7579c055" />
+![Uploading image.png…]()
+![Uploading image.png…]()
+
 
 ## quick start
 
@@ -49,7 +58,7 @@ when it starts, click anywhere to position your robot. then use wasd to drive ar
 - `P` - reposition robot
 - `R` - reset path
 
-## how it works
+## basic features
 
 ### line extraction
 
